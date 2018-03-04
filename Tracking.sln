@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tracking", "Tracking\Tracking.csproj", "{81B4750E-008F-4632-B213-8706174B9DF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TargetControl", "TargetControl\TargetControl.csproj", "{8FDB6E19-442B-4A94-9C55-5C143BDB6C23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Navigation", "Navigation\Navigation.csproj", "{38533AD9-9C64-4170-B2C1-74A333422FB9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81B4750E-008F-4632-B213-8706174B9DF0}.Debug|x64.ActiveCfg = Debug|x64
+		{81B4750E-008F-4632-B213-8706174B9DF0}.Debug|x64.Build.0 = Debug|x64
+		{8FDB6E19-442B-4A94-9C55-5C143BDB6C23}.Debug|x64.ActiveCfg = Debug|x64
+		{8FDB6E19-442B-4A94-9C55-5C143BDB6C23}.Debug|x64.Build.0 = Debug|x64
+		{38533AD9-9C64-4170-B2C1-74A333422FB9}.Debug|x64.ActiveCfg = Debug|x64
+		{38533AD9-9C64-4170-B2C1-74A333422FB9}.Debug|x64.Build.0 = Debug|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D34F53C1-2671-4385-B3AF-2B0C87B5975A}
+	EndGlobalSection
+EndGlobal
