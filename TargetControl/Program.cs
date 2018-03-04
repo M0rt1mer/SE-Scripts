@@ -16,54 +16,98 @@ using VRageMath;
 
 namespace IngameScript {
     partial class Program : MyGridProgram {
-        // This file contains your actual script.
-        //
-        // You can either keep all your code here, or you can create separate
-        // code files to make your program easier to navigate while coding.
-        //
-        // In order to add a new utility class, right-click on your project, 
-        // select 'New' then 'Add Item...'. Now find the 'Space Engineers'
-        // category under 'Visual C# Items' on the left hand side, and select
-        // 'Utility Class' in the main area. Name it in the box below, and
-        // press OK. This utility class will be merged in with your code when
-        // deploying your final script.
-        //
-        // You can also simply create a new utility class manually, you don't
-        // have to use the template if you don't want to. Just do so the first
-        // time to see what a utility class looks like.
 
-        public Program() {
-            // The constructor, called only once every session and
-            // always before any other method is called. Use it to
-            // initialize your script. 
-            //     
-            // The constructor is optional and can be removed if not
-            // needed.
-            // 
-            // It's recommended to set RuntimeInfo.UpdateFrequency 
-            // here, which will allow your script to run itself without a 
-            // timer block.
+        #region export to game
+
+        long selectedEntityId = -1;
+        Dictionary<long, MyDetectedEntityInfo> mdeis = new Dictionary<long, MyDetectedEntityInfo>();
+
+        /// <summary>
+        /// Should be ran with Tracking output as argument
+        /// </summary>
+        /// <param name="argument"></param>
+        public void Main( string argument ) {
+
+            if(argument.StartsWith( "SwitchTarget" )) {
+                if(!mdeis.ContainsKey( selectedEntityId ))
+                    selectedEntityId = mdeis.First().Key;
+                else {
+                    bool found = false;
+                    foreach(var entId in mdeis.Keys)
+                        if(found) {
+                            selectedEntityId = entId;
+                            found = false;
+                            break;
+                        } else if(entId == selectedEntityId)
+                            found = true;
+                    if(found)
+                        selectedEntityId = mdeis.First().Key;
+                }
+            } else if(argument.StartsWith( "Lock" )) {
+                if(mdeis.ContainsKey( selectedEntityId )) {
+                    string weaponClass = argument.Substring( 5 );
+                    List<IMyProgrammableBlock> pbs = new List<IMyProgrammableBlock>();
+                    GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>( pbs, x => x.CustomName.Contains( weaponClass ) );
+                    pbs.First().TryRun( "SelectTarget " + selectedEntityId );
+                }
+            } else {
+
+                //read all inputs
+                foreach(var mdei in StringToMDEIs( argument )) {
+                    if(!mdeis.ContainsKey( mdei.EntityId ) || mdeis[mdei.EntityId].TimeStamp < mdei.TimeStamp)
+                        mdeis[mdei.EntityId] = mdei;
+                }
+
+                StringBuilder outString = new StringBuilder();
+                foreach(long entID in mdeis.Keys)
+                    outString.AppendFormat( "{0} {1,-15} {2,6:N1}\n", entID == selectedEntityId ? "X" : " ", mdeis[entID].Name, Vector3.Distance( Me.CubeGrid.GridIntegerToWorld( Me.Position ), mdeis[entID].Position ) );
+
+                string resultStr = outString.ToString();
+
+                List<IMyTextPanel> outPanels = new List<IMyTextPanel>();
+                GridTerminalSystem.GetBlocksOfType<IMyTextPanel>( outPanels, x => { return x.CustomName.Contains( "[TC]" ); } );
+                foreach(var panel in outPanels)
+                    panel.WritePublicText( resultStr );
+            }
         }
 
-        public void Save() {
-            // Called when the program needs to save its state. Use
-            // this method to save your state to the Storage field
-            // or some other means. 
-            // 
-            // This method is optional and can be removed if not
-            // needed.
+
+
+
+        #region readTracking
+
+        public System.Text.RegularExpressions.Regex mdeiParser = new System.Text.RegularExpressions.Regex( @"([0-9]*):([\w\d\s]*):(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*);(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*)@([0-9]*)" );
+        public MyDetectedEntityInfo? StringToMDEI( string str ) {
+            System.Text.RegularExpressions.Match match = mdeiParser.Match( str );
+            if(match.Value != String.Empty) {
+                BoundingBoxD bb = new BoundingBoxD();
+                bb.Min.X = float.Parse( match.Groups[3].Value );
+                bb.Min.Y = float.Parse( match.Groups[4].Value );
+                bb.Min.Z = float.Parse( match.Groups[5].Value );
+                bb.Max.X = float.Parse( match.Groups[6].Value );
+                bb.Max.Y = float.Parse( match.Groups[7].Value );
+                bb.Max.Z = float.Parse( match.Groups[8].Value );
+                string name = match.Groups[2].Value;
+                long entityId = long.Parse( match.Groups[1].Value );
+                long timestamp = long.Parse( match.Groups[9].Value );
+                return new MyDetectedEntityInfo( entityId, name, Sandbox.ModAPI.Ingame.MyDetectedEntityType.Asteroid, null, MatrixD.Identity, Vector3.Zero, MyRelationsBetweenPlayerAndBlock.Enemies, bb, timestamp );
+            }
+            return null;
+        }
+        public IEnumerable<MyDetectedEntityInfo> StringToMDEIs( string str ) {
+            List<MyDetectedEntityInfo> list = new List<MyDetectedEntityInfo>();
+            foreach(string line in str.Split( new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries )) {
+                MyDetectedEntityInfo? mdei = StringToMDEI( line.Trim( '\r', '\n' ) );
+                if(mdei.HasValue)
+                    list.Add( mdei.Value );
+            }
+            return list;
         }
 
-        public void Main( string argument, UpdateType updateSource ) {
-            // The main entry point of the script, invoked every time
-            // one of the programmable block's Run actions are invoked,
-            // or the script updates itself. The updateSource argument
-            // describes where the update came from. Be aware that the
-            // updateSource is a  bitfield  and might contain more than 
-            // one update type.
-            // 
-            // The method itself is required, but the arguments above
-            // can be removed if not needed.
-        }
+        #endregion
+
+
+        #endregion
+
     }
 }

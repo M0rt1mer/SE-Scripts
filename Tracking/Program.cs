@@ -30,8 +30,6 @@ namespace IngameScript {
         Dictionary<long, MyDetectedEntityInfo> trackedEntities = new Dictionary<long, MyDetectedEntityInfo>();
         List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
 
-        IMyTimerBlock restarter;
-
         Vector3 targetedScan;
         double targetedScanRuntime = 1;
 
@@ -80,27 +78,39 @@ namespace IngameScript {
                 logMessages.Enqueue( string.Format( "Registering {0} as output PB", pb.CustomName ) );
             }
 
-            List<IMyTimerBlock> restarters = new List<IMyTimerBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMyTimerBlock>( restarters, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
-            this.restarter = restarters[0];
+            Runtime.UpdateFrequency = UpdateFrequency.Once | UpdateFrequency.Update1;
 
             logMessages.Enqueue( "Initiating system" );
         }
 
-        public void Main( string argument ) {
-            switch(argument) {
-                case "CheckSystem":
-                    MainCheckSystem();
-                    break;
-                case "TargetedScan":
-                    MainTargetScan();
-                    break;
-                case "Update":
-                    MainUpdate();
-                    break;
-                default:
-                    MainSignal( argument );
-                    break;
+        public void Main( string argument, UpdateType updateType ) {
+            switch(updateType) {
+                case UpdateType.Terminal: {
+                        switch(argument) {
+                            case "CheckSystem":
+                                MainCheckSystem();
+                                break;
+                            case "TargetedScan":
+                                MainTargetScan();
+                                break;
+                        }
+                        break;
+                    }
+                case UpdateType.Once:
+                case UpdateType.Update1:
+                case UpdateType.Update10:
+                case UpdateType.Update100: {
+                        MainUpdate();
+                        break;
+                    }
+                case UpdateType.Antenna: {
+                        MainSignal( argument );
+                        break;
+                    }
+                default: {
+                        Echo("Wrong argument/updatetype");
+                        break;
+                    }
             }
         }
 
@@ -128,7 +138,7 @@ namespace IngameScript {
                 // track self
                 Vector3 speed = lastPosition == Vector3.Zero ? Vector3.Zero : Me.Position - lastPosition;
                 Sandbox.ModAPI.Ingame.MyDetectedEntityType thisEntType = Me.CubeGrid.GridSize == 0 ? Sandbox.ModAPI.Ingame.MyDetectedEntityType.LargeGrid : Sandbox.ModAPI.Ingame.MyDetectedEntityType.SmallGrid;
-                RegisterNewSignal( new MyDetectedEntityInfo( Me.EntityId, "UNKNOWN", thisEntType, null, Me.WorldMatrix, speed, MyRelationsBetweenPlayerAndBlock.Owner, Me.WorldAABB, currentTimestamp < 0 ? 1 : currentTimestamp ), false );
+                RegisterNewSignal( new MyDetectedEntityInfo( Me.EntityId, Me.CubeGrid.CustomName, thisEntType, null, Me.WorldMatrix, speed, MyRelationsBetweenPlayerAndBlock.Owner, Me.WorldAABB, currentTimestamp < 0 ? 1 : currentTimestamp ), false );
 
                 // read sensors
                 foreach(var sensor in sensors)
@@ -146,9 +156,6 @@ namespace IngameScript {
 
                 }
 
-
-
-
                 //update
                 foreach(var signal in trackedEntities.Values)
                     if(signal.TimeStamp < currentTimestamp)
@@ -164,10 +171,6 @@ namespace IngameScript {
                 foreach(var output in filteredOutputs)
                     output.Output( trackedEntities.Values, currentTimestamp );
 
-                if(restarter == null)
-                    logMessages.Enqueue( "No restarter block found" );
-                else
-                    restarter.ApplyAction( "TriggerNow" );
             } catch(Exception e) { logMessages.Enqueue( e.ToString() ); Echo( e.ToString() ); }
             //---------------------------------LOG
             while(logMessages.Count > 10)
