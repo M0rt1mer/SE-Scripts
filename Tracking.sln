@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TargetControl", "TargetCont
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Navigation", "Navigation\Navigation.csproj", "{38533AD9-9C64-4170-B2C1-74A333422FB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiningDrone", "MiningDrone\MiningDrone.csproj", "{8C090D5E-A24E-4E12-AE4A-9AAEA73D6B8E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -20,6 +22,8 @@ Global
 		{8FDB6E19-442B-4A94-9C55-5C143BDB6C23}.Debug|x64.Build.0 = Debug|x64
 		{38533AD9-9C64-4170-B2C1-74A333422FB9}.Debug|x64.ActiveCfg = Debug|x64
 		{38533AD9-9C64-4170-B2C1-74A333422FB9}.Debug|x64.Build.0 = Debug|x64
+		{8C090D5E-A24E-4E12-AE4A-9AAEA73D6B8E}.Debug|x64.ActiveCfg = Debug|x64
+		{8C090D5E-A24E-4E12-AE4A-9AAEA73D6B8E}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

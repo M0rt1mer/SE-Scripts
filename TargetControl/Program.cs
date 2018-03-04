@@ -29,19 +29,22 @@ namespace IngameScript {
         public void Main( string argument ) {
 
             if(argument.StartsWith( "SwitchTarget" )) {
-                if(!mdeis.ContainsKey( selectedEntityId ))
-                    selectedEntityId = mdeis.First().Key;
-                else {
+                if(!mdeis.ContainsKey( selectedEntityId )) {
+                    if(mdeis.Count > 0)
+                        selectedEntityId = mdeis.First().Key;
+                } else {
                     bool found = false;
                     foreach(var entId in mdeis.Keys)
                         if(found) {
                             selectedEntityId = entId;
                             found = false;
                             break;
-                        } else if(entId == selectedEntityId)
+                        } else if(entId == selectedEntityId) {
                             found = true;
+                        }
                     if(found)
-                        selectedEntityId = mdeis.First().Key;
+                        if(mdeis.Count > 0)
+                            selectedEntityId = mdeis.First().Key;
                 }
             } else if(argument.StartsWith( "Lock" )) {
                 if(mdeis.ContainsKey( selectedEntityId )) {
