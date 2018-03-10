@@ -96,6 +96,11 @@
     <Analyzer Include="C:\Users\Martin\AppData\Local\Microsoft\VisualStudio\15.0_4cf79288\Extensions\10pn2gtp.mzb\Analyzers\MDKAnalyzer.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ModMissileFlightControl.cs" />
+    <Compile Include="ModNavigation.cs" />
+    <Compile Include="ModuleSystem.cs" />
+    <Compile Include="ModTracking.cs" />
+    <Compile Include="Output.cs" />
     <Compile Include="MDK\Bootstrapper.cs" />
     <AdditionalFiles Include="MDK\MDK.options">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -105,6 +110,7 @@
     <AdditionalFiles Include="thumb.png" />
     <AdditionalFiles Include="MDK\whitelist.cache" />
   </ItemGroup>
+  <Import Project="..\MDEI\MDEI.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">
     <Copy SourceFiles="mdk\mdk.options" DestinationFolder="$(TargetDir)\mdk" />

@@ -156,7 +156,7 @@ namespace IngameScript {
             else
                 return 0;
         }
-
+        /*
         #region readTracking
 
         public System.Text.RegularExpressions.Regex mdeiParser = new System.Text.RegularExpressions.Regex( @"([0-9]*):([\w\d\s]*):(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*);(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*),(-?[0-9]*\.[0-9]*)@([0-9]*)" );
@@ -188,10 +188,10 @@ namespace IngameScript {
         }
 
         #endregion
-
+        */
 
         #endregion
 
-
+    
     }
 }
