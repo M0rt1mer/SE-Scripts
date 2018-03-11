@@ -22,26 +22,42 @@ namespace IngameScript {
 
             public override int Priority => 10000;
 
-            long selectedEntityId = -1;
-            MyDetectedEntityInfo chosenTarget;
-            NavigationMode mode;
+            INavigationCommand command;
 
             List<IMyGyro> gyros = new List<IMyGyro>();
+            List<IMyThrust> thrusters = new List<IMyThrust>();
+            List<IMyThrust>[] directionalThrusters = new List<IMyThrust>[6];
 
             public override void Initialize() {
-                GridTerminalSystem.GetBlocksOfType<IMyGyro>( gyros );
+                GridTerminalSystem.GetBlocksOfType<IMyGyro>( gyros, (x) => x.CubeGrid == Me.CubeGrid );
+                List<IMyThrust> thrusters = new List<IMyThrust>();
+                GridTerminalSystem.GetBlocksOfType<IMyThrust>( thrusters, ( x ) => x.CubeGrid == Me.CubeGrid );
+                for(int i = 0; i < 6; i++)
+                    directionalThrusters[i] = new List<IMyThrust>();
+                foreach( IMyThrust thruster in thrusters ) {
+                    directionalThrusters[(int)thruster.Orientation.Forward].Add(thruster);
+                }
             }
 
             protected override void Command( string argument ) {
                 if(argument.StartsWith( "Navigate" )) {
-                    String[] args = argument.Substring( 12 ).Split( ' ' );
-                    selectedEntityId = long.Parse( args[0] );
-                    Enum.TryParse<NavigationMode>( args[1], out mode );
+                    String type = argument.Substring( 12 );
+                    String args = type.Substring( argument.IndexOf( ' ' ) );
+                    if(commandFactoryList.ContainsKey( type )) {
+                        command = commandFactoryList[type]( args );
+                    } else {
+                        program.logMessages.Enqueue( "Invalid command for Navigation module: "+argument );
+                    }
                 }
             }
 
+            public void Command( INavigationCommand newCommand ) {
+                this.command = newCommand;
+            }
+
+            //public void Command( NavigationMode mode,  )
+
             protected override void Update() {
-                bool hasTarget = selectedEntityId >= 0 && program.trackedEntities.TryGetValue( selectedEntityId, out chosenTarget );
 
                 Vector3 facing = Me.CubeGrid.GridIntegerToWorld( Me.Position + Base6Directions.GetIntVector( Me.Orientation.Forward ) ) - Me.CubeGrid.GridIntegerToWorld( Me.Position );
                 facing.Normalize();
@@ -52,16 +68,17 @@ namespace IngameScript {
 
                 Vector3 desiredSpeed;
 
-                if(!hasTarget) {
+                if( command == null ) {
                     desiredSpeed = Vector3.Zero;
                 } else {
-                    Vector3 targetDirection = chosenTarget.Position - Me.CubeGrid.GridIntegerToWorld( Me.Position );
-                    targetDirection.Normalize();
+                    var navigationData = command.GetNavData( program );
+                    //Vector3 targetDirection = chosenTarget.Position - Me.CubeGrid.GridIntegerToWorld( Me.Position );
+                    //targetDirection.Normalize();
 
-                    desiredSpeed = facing.Cross( targetDirection ); //get direction of desired rotation
+                    desiredSpeed = facing.Cross( navigationData.desiredFacing.Value ); //get direction of desired rotation
                     desiredSpeed.Normalize();
                     //Echo("Dd: " + desiredSpeed);
-                    desiredSpeed.Multiply( 0.5f - facing.Dot( targetDirection ) / 2 ); //get magnitude of desired rotation
+                    desiredSpeed.Multiply( 0.5f - facing.Dot( navigationData.desiredFacing.Value ) / 2 ); //get magnitude of desired rotation
                                                                                        //Echo( "Desired speed: " + desiredSpeed.Length() );
                                                                                        //desiredSpeed = desiredDir - rotSpeed;
                                                                                        //Echo( string.Format( "Facing: {0} TargetDir:{1}", facing, targetDirection ) );
@@ -84,6 +101,9 @@ namespace IngameScript {
                     } catch(Exception e) { program.Echo( e.StackTrace ); }
                 }
 
+
+
+
             }
 
             private float VecAbsDot( Vector3 a, Vector3 b ) {
@@ -97,15 +117,43 @@ namespace IngameScript {
                     return 0;
             }
 
-            public enum NavigationMode {
-                HIT
+            public struct NavigationData{
+                public Vector3? desiredFacing { get; set; }
+                public Vector3? desiredSpeed { get; set; }
             }
 
-            protected class NavigationCommand {
+            Dictionary<string, Func<string, INavigationCommand>> commandFactoryList = new Dictionary<string, Func<string, INavigationCommand>>() {
+                { "HIT", CommHitTarget.Create }
+            };
 
-                public Vector3 desiredSpeed;
-                public Vector3 desiredFacing;
+            public interface INavigationCommand {
+                NavigationData GetNavData( Program program );
+            }
 
+            public class CommHitTarget : INavigationCommand {
+
+                long targetEntity;
+
+                public CommHitTarget( long targetEntity ) {
+                    this.targetEntity = targetEntity;
+                }
+
+                public static CommHitTarget Create( string argument ) {
+                    long id;
+                    if( long.TryParse( argument, out id ) )
+                        return new CommHitTarget( id );
+                    return null;
+                }
+
+                public NavigationData GetNavData( Program program ) {
+                    MyDetectedEntityInfo targetInfo;
+                    if(program.trackedEntities.TryGetValue( targetEntity, out targetInfo )) {
+                        Vector3 direction = (program.Me.CubeGrid.GetPosition() - targetInfo.Position);
+                        float distance = direction.Normalize();
+                        return new NavigationData() { desiredSpeed = direction * 100, desiredFacing = direction };
+                    }
+                    return new NavigationData() { desiredSpeed = Vector3.Zero };
+                }
             }
 
              

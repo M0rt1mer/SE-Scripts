@@ -19,7 +19,8 @@ namespace IngameScript {
 
         static Dictionary<string, Func<Program,Module>> factoryLst = new Dictionary<string, Func<Program,Module>>() {
             { "navigation", (program) => new ModNavigation(program) },
-            { "tracking", (program) => new ModTracking(program) }
+            { "tracking", (program) => new ModTracking(program) },
+            { "missile", (program) => new ModMissileFlightControl(program) }
         };
 
         protected Dictionary<string, Module> installedModules = new Dictionary<string, Module>();
@@ -31,6 +32,7 @@ namespace IngameScript {
                     Module mod = factoryLst[moduleName]( this );
                     installedModules.Add( moduleName, mod  );
                     moduleUpdateOrder.Add( mod.Priority, mod );
+                    logMessages.Enqueue( "Initiating module "+mod.GetType().Name );
                 }
             }
             foreach(Module module in moduleUpdateOrder.Values)
