@@ -25,7 +25,7 @@ namespace IngameScript {
             INavigationCommand command;
 
             List<IMyGyro> gyros = new List<IMyGyro>();
-            List<IMyThrust> thrusters = new List<IMyThrust>();
+            //List<IMyThrust> thrusters = new List<IMyThrust>();
             List<IMyThrust>[] directionalThrusters = new List<IMyThrust>[6];
 
             public override void Initialize() {
@@ -101,6 +101,54 @@ namespace IngameScript {
                     } catch(Exception e) { program.Echo( e.StackTrace ); }
                 }
 
+                //TODO: use speed capping to reach desired speed (idea: if desired speed == max speed, use "infinite" magnitude -> will cause desiredSpeedChange to align with desiredSpeed)
+                Vector3 desiredSpeedChange = desiredSpeed - program.trackedEntities[Me.EntityId].Velocity; //desired velocity change
+
+                Vector3[] base6ToWorld = new Vector3[] { facing, -facing, facingLeft, -facingLeft, facingUp, -facingUp }; //make use of previous calculations
+                float[] potentialPerDirection = new float[6];
+                //int activeAxesCount = 0; 
+                List<int> activeAxes = new List<int>(); //axes along which we can accelerate
+                for(int i = 0; i < 6; i++)
+                    if(desiredSpeedChange.Dot( base6ToWorld[i] ) > 0) { // the correct half-space (the one towards the desired target)
+                        foreach(IMyThrust thruster in directionalThrusters[i])
+                            potentialPerDirection[i] += thruster.MaxEffectiveThrust;
+                        if(potentialPerDirection[i] > 0)
+                            activeAxes.Add( i );
+                    }
+
+                //TODO: make this parameter, or depend on distance - can cause orbiting if target is too close and arc is too wide
+                float minCosine = 0.8f; //defines the acceptible arc of inpression for 1- or 2-axis acceleration
+
+                Vector3 desiredSpeedChangeDirection = desiredSpeedChange;
+                desiredSpeedChangeDirection.Normalize();
+
+                float[] powerPerAxis = new float[6];
+                switch(activeAxes.Count) {
+                    case 1: { //only one axis - check angle between axis and desired direction
+                            float cosine = desiredSpeedChangeDirection.Dot( base6ToWorld[activeAxes[0]] );
+                            if(cosine > minCosine) { //possible
+                                powerPerAxis[0] = 1;
+                            }
+                            break;
+                        }
+                    case 2: { //two axes - check angle between plane of acceleration (defined by two acceleration axes) and desired direction
+                            float sine = desiredSpeedChangeDirection.Dot( base6ToWorld[activeAxes[0]].Cross( base6ToWorld[activeAxes[1]] ) ); //it's sine, because it's Dot with normal
+                            float cosine = (float)Math.Sqrt( 1 - (sine * sine) ); // sin^2 + cos^2 = 1
+                            if(cosine > minCosine) {
+                                Vector3 totalThrust = potentialPerDirection[activeAxes[0]] * base6ToWorld[activeAxes[0]] + potentialPerDirection[activeAxes[1]] * base6ToWorld[activeAxes[1]];
+                                Vector3 projectedThrust = desiredSpeedChangeDirection * desiredSpeedChangeDirection.Dot( totalThrust );
+                                float thrust0 = potentialPerDirection[activeAxes[0]] / base6ToWorld[0].Dot( projectedThrust );//"contribution" of axis0 to desired speed
+                                float thrust1 = potentialPerDirection[activeAxes[1]] / base6ToWorld[1].Dot( projectedThrust );
+                                
+                                powerPerAxis[activeAxes[0]] = thrust0 / potentialPerDirection[activeAxes[0]];
+                                powerPerAxis[activeAxes[1]] = thrust1 / potentialPerDirection[activeAxes[1]];
+                            }
+                            break;
+                        }
+                    case 3: { //three axes - any acceleration direction is possible
+                            break;
+                        }
+                }
 
 
 
