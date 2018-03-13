@@ -27,7 +27,7 @@ namespace IngameScript {
         /// </summary>
         /// <param name="argument"></param>
         public void Main( string argument ) {
-
+            Echo( argument );
             if(argument.StartsWith( "SwitchTarget" )) {
                 if(!mdeis.ContainsKey( selectedEntityId )) {
                     if(mdeis.Count > 0)
@@ -51,8 +51,14 @@ namespace IngameScript {
                     string weaponClass = argument.Substring( 5 );
                     List<IMyProgrammableBlock> pbs = new List<IMyProgrammableBlock>();
                     GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>( pbs, x => x.CustomName.Contains( weaponClass ) );
-                    pbs.First().TryRun( "SelectTarget " + selectedEntityId );
+                    if( pbs.Count > 0 )
+                        pbs.First().TryRun( "SelectTarget " + selectedEntityId );
                 }
+            } else if(argument.StartsWith( "Broadcast" )) {
+                List<IMyRadioAntenna> antennae = new List<IMyRadioAntenna>();
+                GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>( antennae, x => x.CubeGrid == Me.CubeGrid );
+                if(antennae.Count > 0)
+                    antennae[0].TransmitMessage( "Navigate HIT " + selectedEntityId, MyTransmitTarget.Ally | MyTransmitTarget.Owned );
             } else {
 
                 //read all inputs

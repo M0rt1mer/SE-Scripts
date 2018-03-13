@@ -41,12 +41,15 @@ namespace IngameScript {
 
             protected override void Command( string argument ) {
                 if(argument.StartsWith( "Navigate" )) {
-                    String type = argument.Substring( 12 );
-                    String args = type.Substring( argument.IndexOf( ' ' ) );
-                    if(commandFactoryList.ContainsKey( type )) {
+                    String type = argument.Substring( 9 );
+                    int split = type.IndexOf( ' ' );
+                    String args = type.Substring( split );
+                    type = type.Substring( 0, split );
+                    if(commandFactoryList.ContainsKey( type ) ) {
                         command = commandFactoryList[type]( args );
+                        program.logMessages.Enqueue( "New nav command received" );
                     } else {
-                        program.logMessages.Enqueue( "Invalid command for Navigation module: "+argument );
+                        program.logMessages.Enqueue( "Invalid command for Navigation module: " + type + " | " + args  );
                     }
                 }
             }
@@ -88,7 +91,7 @@ namespace IngameScript {
 
                 //targetRotation = new Vector3( 0,targetRotation.Y,0 ); 
 
-                program.Echo( "TR:   " + targetRotation );
+                //program.Echo( "TR:   " + targetRotation );
 
                 foreach(var gyro in gyros) {
                     try {

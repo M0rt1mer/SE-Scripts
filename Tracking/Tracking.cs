@@ -98,7 +98,7 @@ namespace IngameScript {
                         break;
                     }
                 default: {
-                        Echo("Wrong argument/updatetype");
+                        logMessages.Enqueue("Wrong argument/updatetype");
                         break;
                     }
             }
