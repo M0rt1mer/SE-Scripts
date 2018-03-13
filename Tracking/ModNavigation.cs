@@ -135,23 +135,54 @@ namespace IngameScript {
                             float sine = desiredSpeedChangeDirection.Dot( base6ToWorld[activeAxes[0]].Cross( base6ToWorld[activeAxes[1]] ) ); //it's sine, because it's Dot with normal
                             float cosine = (float)Math.Sqrt( 1 - (sine * sine) ); // sin^2 + cos^2 = 1
                             if(cosine > minCosine) {
-                                Vector3 totalThrust = potentialPerDirection[activeAxes[0]] * base6ToWorld[activeAxes[0]] + potentialPerDirection[activeAxes[1]] * base6ToWorld[activeAxes[1]];
-                                Vector3 projectedThrust = desiredSpeedChangeDirection * desiredSpeedChangeDirection.Dot( totalThrust );
-                                float thrust0 = potentialPerDirection[activeAxes[0]] / base6ToWorld[0].Dot( projectedThrust );//"contribution" of axis0 to desired speed
-                                float thrust1 = potentialPerDirection[activeAxes[1]] / base6ToWorld[1].Dot( projectedThrust );
-                                
-                                powerPerAxis[activeAxes[0]] = thrust0 / potentialPerDirection[activeAxes[0]];
-                                powerPerAxis[activeAxes[1]] = thrust1 / potentialPerDirection[activeAxes[1]];
+
+                                float maxPower0 = RightAngleProjection( desiredSpeedChangeDirection, base6ToWorld[activeAxes[0]] * potentialPerDirection[activeAxes[0]] );
+                                float maxPower1 = RightAngleProjection( desiredSpeedChangeDirection, base6ToWorld[activeAxes[1]] * potentialPerDirection[activeAxes[1]] );
+                                float usablePower = Math.Min( maxPower0, maxPower1 );
+
+                                powerPerAxis[0] = usablePower / maxPower0;
+                                powerPerAxis[1] = usablePower / maxPower1;
+
                             }
                             break;
                         }
                     case 3: { //three axes - any acceleration direction is possible
+                            float[] maxPower = new float[3];
+                            for(int i = 0; i<3;i++)
+                                maxPower[i] = RightAngleProjection( desiredSpeedChangeDirection, base6ToWorld[activeAxes[i]] * potentialPerDirection[activeAxes[i]] );
+                            
+                            float usablePower = Math.Min( Math.Min( maxPower[0], maxPower[1] ), maxPower[2] );
+
+                            for(int i = 0; i < 3; i++)
+                                powerPerAxis[i] = usablePower / maxPower[i];
                             break;
                         }
                 }
 
+                for(int i = 0; i < 6; i++) {
+                    foreach(IMyThrust thruster in directionalThrusters[i])
+                        thruster.ThrustOverridePercentage = powerPerAxis[i];
+                }
 
+            }
 
+            /// <summary>
+            /// Calculates right-angle projection of arbitrary long thrust vector onto unit-sized direction vector
+            ///  |projection| / sin (β) = |thrust| / sin( α )
+            ///  where β = 90° and α = 90 - γ (γ beeing angle between thrust and direction, which can be calculated using vector projection)
+            ///  |projection| / 1 = |thrust| / sin( 90-γ )
+            ///  where sin( 90-γ ) conveniently is cos(γ)
+            ///  |projection| = |thrust| / ( direction.thrust / |direction|*|thrust| )
+            ///  where |direction| is 1, as it is expected to be unit vector
+            ///  |projection| = |thrust| / (direction.thrust / |thrust|)
+            ///  |projection| = |thrust|^2 / direction.thrust
+            ///  both of which are very cheap to calculate
+            /// </summary>
+            /// <param name="direction"></param>
+            /// <param name="thrust"></param>
+            /// <returns></returns>
+            private float RightAngleProjection( Vector3 direction, Vector3 thrust ) {
+                return thrust.LengthSquared() / direction.Dot( thrust );
             }
 
             private float VecAbsDot( Vector3 a, Vector3 b ) {
