@@ -58,10 +58,14 @@ namespace IngameScript {
                         }
                     }
 
+                    List<MyDetectedEntityInfo> mdeis = new List<MyDetectedEntityInfo>();
                     // read sensors
-                    foreach(var sensor in sensors)
-                        if(!sensor.LastDetectedEntity.IsEmpty())
-                            program.RegisterNewSignal( sensor.LastDetectedEntity, true );
+                    foreach(var sensor in sensors) {
+                        mdeis.Clear();
+                        sensor.DetectedEntities( mdeis );
+                        foreach(MyDetectedEntityInfo mdei in mdeis)
+                            program.RegisterNewSignal( mdei, true );
+                    }
 
                     // ----------------------------- PRIORITY CAMERA SCANNING
                     double[] scanPotential = new double[6];

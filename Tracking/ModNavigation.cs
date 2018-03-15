@@ -234,7 +234,7 @@ namespace IngameScript {
                         float distance = direction.Normalize();
                         return new NavigationData() { desiredSpeed = direction * 100, desiredFacing = direction };
                     }
-                    return new NavigationData() { desiredSpeed = Vector3.Zero };
+                    return new NavigationData() { desiredSpeed = Vector3.Zero, desiredFacing = Vector3.Zero };
                 }
             }
 

@@ -29,18 +29,22 @@ namespace IngameScript {
         public void Main( string argument ) {
             Echo( argument );
             if(argument.StartsWith( "SwitchTarget" )) {
+                Echo("Switching to next target");
                 if(!mdeis.ContainsKey( selectedEntityId )) {
                     if(mdeis.Count > 0)
                         selectedEntityId = mdeis.First().Key;
+                    Echo( "resetting " + selectedEntityId );
                 } else {
                     bool found = false;
                     foreach(var entId in mdeis.Keys)
                         if(found) {
+                            Echo( "setting " + entId );
                             selectedEntityId = entId;
                             found = false;
                             break;
                         } else if(entId == selectedEntityId) {
                             found = true;
+                            Echo( "found " + entId );
                         }
                     if(found)
                         if(mdeis.Count > 0)
@@ -56,7 +60,7 @@ namespace IngameScript {
                 }
             } else if(argument.StartsWith( "Broadcast" )) {
                 List<IMyRadioAntenna> antennae = new List<IMyRadioAntenna>();
-                GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>( antennae, x => x.CubeGrid == Me.CubeGrid );
+                GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>( antennae, x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TC]") );
                 if(antennae.Count > 0)
                     antennae[0].TransmitMessage( "Navigate HIT " + selectedEntityId, MyTransmitTarget.Ally | MyTransmitTarget.Owned );
             } else {
