@@ -1,18 +1,7 @@
-﻿using Sandbox.Game.EntityComponents;
-using Sandbox.ModAPI.Ingame;
-using Sandbox.ModAPI.Interfaces;
-using SpaceEngineers.Game.ModAPI.Ingame;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Text;
+﻿using Sandbox.ModAPI.Ingame;
 using System;
-using VRage.Collections;
-using VRage.Game.Components;
-using VRage.Game.ModAPI.Ingame;
-using VRage.Game.ObjectBuilders.Definitions;
-using VRage.Game;
-using VRageMath;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace IngameScript {
     partial class Program {
@@ -23,20 +12,24 @@ namespace IngameScript {
             { "missile", (program) => new ModMissileFlightControl(program) }
         };
 
-        protected Dictionary<string, Module> installedModules = new Dictionary<string, Module>();
-        protected SortedList<int,Module> moduleUpdateOrder = new SortedList<int,Module>();
+        Dictionary<string, Module> installedModules = new Dictionary<string, Module>();
+        SortedList<int,Module> moduleUpdateOrder = new SortedList<int,Module>();
 
         void ModuleIntialize( string config ) {
-            foreach(string moduleName in config.Split( ',' )) {
+            Dictionary<Module, IEnumerable<string>> initArguments = new Dictionary<Module, IEnumerable<string>>();
+            foreach(string moduleInit in config.Split( new char[] { ';' ,',' }, StringSplitOptions.RemoveEmptyEntries )) {
+                string[] tokens = moduleInit.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+                string moduleName = tokens[0];
                 if(factoryLst.ContainsKey( moduleName )) {
                     Module mod = factoryLst[moduleName]( this );
-                    installedModules.Add( moduleName, mod  );
+                    initArguments.Add( mod, tokens.Skip( 1 ) );
+                    installedModules.Add( moduleName, mod );
                     moduleUpdateOrder.Add( mod.Priority, mod );
-                    logMessages.Enqueue( "Initiating module "+mod.GetType().Name );
+                    logMessages.Enqueue( "Installing module "+mod.GetType().Name + " params: '" + string.Join("', '", tokens) + "'");
                 }
             }
             foreach(Module module in moduleUpdateOrder.Values)
-                module.Initialize();
+                module.Initialize( initArguments[module] );
         }
 
         void ModuleUpdate( string arguments, UpdateType type ) {
@@ -49,6 +42,10 @@ namespace IngameScript {
                 module.Check();
         }
 
+        void DebugPrintModules() {
+            Echo( string.Format("M: {0}", string.Join( ", ", moduleUpdateOrder.Values.Select( x=> x.GetType().Name ) ) ) );
+        }
+
         public abstract class Module {
             protected Program program;
             public Module( Program program ) {
@@ -56,7 +53,7 @@ namespace IngameScript {
             }
             public abstract int Priority { get; }
             public abstract void Main( string arguments, UpdateType upType );
-            public abstract void Initialize();
+            public abstract void Initialize( IEnumerable<string> arguments);
             public virtual void Check() {
                 program.Echo( this.GetType().Name + " OK" );
             }

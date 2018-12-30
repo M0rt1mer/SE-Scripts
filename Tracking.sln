@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiningDrone", "MiningDrone\
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MDEI", "MDEI\MDEI.shproj", "{22750A1E-B330-46B0-A9AE-4C44DF8EFE12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Research", "Research\Research.csproj", "{735562B7-93D4-4F0C-B08C-B2C1FA5C0780}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rdav", "Rdav\Rdav.csproj", "{8BC4A6F1-410C-4A39-AF3F-3FD6BAC5120C}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		MDEI\MDEI.projitems*{22750a1e-b330-46b0-a9ae-4c44df8efe12}*SharedItemsImports = 13
@@ -32,6 +36,10 @@ Global
 		{38533AD9-9C64-4170-B2C1-74A333422FB9}.Debug|x64.Build.0 = Debug|x64
 		{8C090D5E-A24E-4E12-AE4A-9AAEA73D6B8E}.Debug|x64.ActiveCfg = Debug|x64
 		{8C090D5E-A24E-4E12-AE4A-9AAEA73D6B8E}.Debug|x64.Build.0 = Debug|x64
+		{735562B7-93D4-4F0C-B08C-B2C1FA5C0780}.Debug|x64.ActiveCfg = Debug|x64
+		{735562B7-93D4-4F0C-B08C-B2C1FA5C0780}.Debug|x64.Build.0 = Debug|x64
+		{8BC4A6F1-410C-4A39-AF3F-3FD6BAC5120C}.Debug|x64.ActiveCfg = Debug|x64
+		{8BC4A6F1-410C-4A39-AF3F-3FD6BAC5120C}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

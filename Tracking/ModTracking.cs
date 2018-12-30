@@ -1,17 +1,7 @@
-﻿using Sandbox.Game.EntityComponents;
-using Sandbox.ModAPI.Ingame;
-using Sandbox.ModAPI.Interfaces;
-using SpaceEngineers.Game.ModAPI.Ingame;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Text;
+﻿using Sandbox.ModAPI.Ingame;
 using System;
-using VRage.Collections;
-using VRage.Game.Components;
-using VRage.Game.ModAPI.Ingame;
-using VRage.Game.ObjectBuilders.Definitions;
-using VRage.Game;
+using System.Collections.Generic;
+using System.Text;
 using VRageMath;
 
 namespace IngameScript {
@@ -31,7 +21,7 @@ namespace IngameScript {
 
             Random rnd = new Random();
 
-            public override void Initialize() {
+            public override void Initialize( IEnumerable<string> arguments ) {
                 program.GridTerminalSystem.GetBlocksOfType<IMyCameraBlock>( fixedCameras, (x => x.CubeGrid == program.Me.CubeGrid) );
                 foreach(var cam in fixedCameras)
                     cam.EnableRaycast = true;

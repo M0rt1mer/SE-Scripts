@@ -1,29 +1,27 @@
-﻿using Sandbox.Game.EntityComponents;
-using Sandbox.ModAPI.Ingame;
-using Sandbox.ModAPI.Interfaces;
-using SpaceEngineers.Game.ModAPI.Ingame;
-using System.Collections.Generic;
-using System.Collections;
-using System.Linq;
-using System.Text;
+﻿using Sandbox.ModAPI.Ingame;
 using System;
-using VRage.Collections;
-using VRage.Game.Components;
-using VRage.Game.ModAPI.Ingame;
-using VRage.Game.ObjectBuilders.Definitions;
+using System.Collections.Generic;
+using System.Text;
 using VRage.Game;
 using VRageMath;
 
 namespace IngameScript {
     partial class Program : MyGridProgram {
 
-        #region export to game
         private const float PASSIVE_ROAM_DISTANCE = 50;
 
         List<IMyTextPanel> logPanels = new List<IMyTextPanel>();
-        List<IMyTextPanel> debugPanels = new List<IMyTextPanel>();
         Queue<string> logMessages = new Queue<string>();
-        
+
+        #region DEBUG
+        List<IMyTextPanel> debugPanels = new List<IMyTextPanel>();
+
+        List<IMyRadioAntenna> debugAntennae = new List<IMyRadioAntenna>();
+        List<string> antennaDebug = new List<string>();
+        #endregion
+
+
+
         Dictionary<long, MyDetectedEntityInfo> trackedEntities = new Dictionary<long, MyDetectedEntityInfo>();
         List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
 
@@ -60,6 +58,8 @@ namespace IngameScript {
                 filteredOutputs.Add( new AntennaOutput( antenna ) );
                 logMessages.Enqueue( string.Format( "Registering {0} as output antenna", antenna.CustomName ) );
             }
+
+            GridTerminalSystem.GetBlocksOfType( debugAntennae, (x => x.CubeGrid == Me.CubeGrid && x.CustomData.StartsWith( "[TDBG]" )) );
 
             List<IMyProgrammableBlock> pbs = new List<IMyProgrammableBlock>();
             GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>( pbs, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
@@ -135,6 +135,22 @@ namespace IngameScript {
             foreach(var logPanel in logPanels)
                 logPanel.WritePublicText( bld.ToString() );
 
+            DebugPrintModules();
+            Echo( string.Format( "@{0}, took {1:0.0} ms", currentTimestamp, Runtime.LastRunTimeMs ) );
+            Echo( string.Format( "{0:00000} / {1} instructions", Runtime.CurrentInstructionCount, Runtime.MaxInstructionCount ) );
+            Echo( string.Format( "{0} output devices", filteredOutputs.Count ) );
+
+            if(antennaDebug.Count > 0) {
+                string chosenString = antennaDebug[(int)(currentTimestamp / 20L) % antennaDebug.Count];
+                string resultString = string.Join( " ", antennaDebug );
+                Echo( resultString );
+
+                antennaDebug.Clear();
+                Echo( " " + debugAntennae.Count );
+                foreach(var antenna in debugAntennae) {
+                    antenna.CustomName = resultString;
+                }
+            }
         }
 
         private void MainCheckSystem() {
@@ -160,12 +176,14 @@ namespace IngameScript {
             }
         }
 
+        public void DebugWithAntenna(string debugString) {
+            antennaDebug.Add( debugString );
+        }
+
         private struct PrioritizedScan {
             Vector3 position;
             float priority;
         }
-
-        #endregion
 
     }
 }
