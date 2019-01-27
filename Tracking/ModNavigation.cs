@@ -152,7 +152,7 @@ namespace IngameScript {
                 /*Vector3 optimalThrustSpeed = HandleThrust( tempData );
                 if(!tempData.navData.desiredFacing.HasValue)
                     tempData.navData.desiredFacing = optimalThrustSpeed;*/
-                HandleFacingWithQuat( tempData );
+                HandleFacingInLocalCoords( tempData );
 
             }
 
@@ -166,17 +166,18 @@ namespace IngameScript {
 
                         //inverse quaternion is used to transform world direction to local direction
                         Quaternion Quat_Two = Quaternion.CreateFromForwardUp( tempData.facing, tempData.facingUp );
+                        //var InvQuat = Quaternion.Inverse( Quat_Two );
                         var InvQuat = Quaternion.Inverse( Quat_Two );
 
-                        program.DebugWithAntenna( string.Format( "FW: {0:0.00} {1:0.00} {2:0.00}", tempData.navData.desiredForward.Value.X, tempData.navData.desiredForward.Value.Y, tempData.navData.desiredForward.Value.Z ) );
-                        program.DebugWithAntenna( string.Format( "UP: {0:0.00} {1:0.00} {2:0.00}", tempData.navData.desiredUp.Value.X, tempData.navData.desiredUp.Value.Y, tempData.navData.desiredUp.Value.Z ) );
+                        //program.DebugWithAntenna( string.Format( "FW: {0:0.00} {1:0.00} {2:0.00}", tempData.navData.desiredForward.Value.X, tempData.navData.desiredForward.Value.Y, tempData.navData.desiredForward.Value.Z ) );
+                        //program.DebugWithAntenna( string.Format( "UP: {0:0.00} {1:0.00} {2:0.00}", tempData.navData.desiredUp.Value.X, tempData.navData.desiredUp.Value.Y, tempData.navData.desiredUp.Value.Z ) );
 
                         //transform to local coordinate system
                         Vector3 desiredForward = Vector3.Transform( tempData.navData.desiredForward.Value, InvQuat );
                         Vector3 desiredUp = Vector3.Transform( tempData.navData.desiredUp.Value, InvQuat );
 
-                        program.DebugWithAntenna( string.Format( "L FW: {0:0.00} {1:0.00} {2:0.00}", desiredForward.X, desiredForward.Y, desiredForward.Z ) );
-                        program.DebugWithAntenna( string.Format( "L UP: {0:0.00} {1:0.00} {2:0.00}", desiredUp.X, desiredUp.Y, desiredUp.Z ) );
+                        //program.DebugWithAntenna( string.Format( "L FW: {0:0.00} {1:0.00} {2:0.00}", desiredForward.X, desiredForward.Y, desiredForward.Z ) );
+                        //program.DebugWithAntenna( string.Format( "L UP: {0:0.00} {1:0.00} {2:0.00}", desiredUp.X, desiredUp.Y, desiredUp.Z ) );
 
                         targetRotation = Quaternion.CreateFromForwardUp( desiredForward, desiredUp );
 
@@ -186,7 +187,28 @@ namespace IngameScript {
 
                 } else return;
 
-                program.DebugWithAntenna( string.Format( "Quat: {0:0.00} {1:0.00} {2:0.00} {3:0.00}", targetRotation.X, targetRotation.Y, targetRotation.Z, targetRotation.W ) );
+                //program.DebugWithAntenna( string.Format( "Quat: {0:0.00} {1:0.00} {2:0.00} {3:0.00}", targetRotation.X, targetRotation.Y, targetRotation.Z, targetRotation.W ) );
+
+                Vector3 turningAxis;
+                float angle;
+                targetRotation.GetAxisAngle( out turningAxis, out angle );
+
+                turningAxis = ToEulerAngles( targetRotation );
+
+                //program.DebugWithAntenna( string.Format( "Angle: {0:0.00}", angle ) );
+                program.DebugWithAntenna( string.Format( "Angles: {0:0.00} {1:0.00} {2:0.00}", turningAxis.X, turningAxis.Y, turningAxis.Z) );
+
+                foreach(var gyro in gyros) {
+                    try {
+                        gyro.SetValueBool( "Override", true );
+
+                        gyro.Pitch = -turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Left ) ) * angle;
+                        gyro.Yaw = turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Up ) ) * angle;
+                        gyro.Roll = -turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Forward ) ) * angle;
+
+                    } catch(Exception e) { program.Echo( e.StackTrace ); }
+                }
+
 
                 //program.Echo( string.Format( "DRS: {0:0.00} {1:0.00} {2:0.00}", desiredRotSpeed.X, desiredRotSpeed.Y, desiredRotSpeed.Z ) );
                 //program.Echo( string.Format( "Quat: {0:0.00} {1:0.00} {2:0.00}", targetRotation.X/targetRotation.W, targetRotation.Y / targetRotation.W, targetRotation.Z / targetRotation.W ) );
@@ -196,7 +218,7 @@ namespace IngameScript {
                 //Vector3 targetRotation = new Vector3( tempData.facingLeft.Dot( adjustedQuaternion ), tempData.facingUp.Dot( adjustedQuaternion ), tempData.facing.Dot( adjustedQuaternion ) );
 
 
-                
+
 
                 //targetRotation = new Vector3( 0,targetRotation.Y,0 ); 
 
@@ -214,6 +236,119 @@ namespace IngameScript {
                     } catch(Exception e) { program.Echo( e.StackTrace ); }
                 }*/
 
+            }
+
+            private void HandleFacingInLocalCoords( TempData tempData ) {
+
+                Matrix3x3 worldToLocal = Me.CubeGrid.WorldMatrix.Rotation;
+                worldToLocal.Transpose();
+
+                Vector3 targetForward;
+                Vector3 targetUp;
+
+                Quaternion targetRotation = Quaternion.Identity;
+
+                if(tempData.navData.desiredForward.HasValue) {
+                  
+                    targetForward = worldToLocal.Transform( tempData.navData.desiredForward.Value );
+
+                    if(tempData.navData.desiredUp.HasValue) { //forward and up
+
+                        targetUp = worldToLocal.Transform( tempData.navData.desiredUp.Value );
+                        targetRotation = Quaternion.CreateFromForwardUp( targetForward, targetUp );
+
+                    } else { //just forward
+                        targetRotation = Quaternion.CreateFromTwoVectors( Vector3.Forward, targetForward );
+                    }
+
+                } else return;
+                
+                //program.DebugWithAntenna( string.Format( "Quat: {0:0.00} {1:0.00} {2:0.00} {3:0.00}", targetRotation.X, targetRotation.Y, targetRotation.Z, targetRotation.W ) );
+
+                Vector3 turningAxis = ToEulerAngles( targetRotation );
+
+                //program.DebugWithAntenna( string.Format( "Angle: {0:0.00}", angle ) );
+                program.DebugWithAntenna( string.Format( "Angles: {0:0.00} {1:0.00} {2:0.00}", turningAxis.X, turningAxis.Y, turningAxis.Z ) );
+
+                //turningAxis.X = 0;
+                turningAxis.Z = -turningAxis.Z;
+                turningAxis.Y = -turningAxis.Y;
+                turningAxis.X = -turningAxis.X;
+
+                foreach(var gyro in gyros) {
+                    try {
+                        gyro.SetValueBool( "Override", true );
+
+                        gyro.Pitch = turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Left ) ) * 10;
+                        gyro.Yaw = turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Up ) ) * 10;
+                        gyro.Roll = turningAxis.Dot( Base6Directions.GetVector( gyro.Orientation.Forward ) ) * 10;
+
+                    } catch(Exception e) { program.Echo( e.StackTrace ); }
+                }
+
+                
+                //program.Echo( string.Format( "DRS: {0:0.00} {1:0.00} {2:0.00}", desiredRotSpeed.X, desiredRotSpeed.Y, desiredRotSpeed.Z ) );
+                //program.Echo( string.Format( "Quat: {0:0.00} {1:0.00} {2:0.00}", targetRotation.X/targetRotation.W, targetRotation.Y / targetRotation.W, targetRotation.Z / targetRotation.W ) );
+
+                //Vector3 adjustedQuaternion = new Vector3( targetRotation.X, targetRotation.Y, targetRotation.Z ) * ( 0.5f - targetRotation.W/2 );
+
+                //Vector3 targetRotation = new Vector3( tempData.facingLeft.Dot( adjustedQuaternion ), tempData.facingUp.Dot( adjustedQuaternion ), tempData.facing.Dot( adjustedQuaternion ) );
+
+
+
+
+                //targetRotation = new Vector3( 0,targetRotation.Y,0 ); 
+
+                //program.Echo( "TR:   " + targetRotation );
+
+
+                /*foreach(var gyro in gyros) {
+                    try {
+                        gyro.SetValueBool( "Override", true );
+
+                        gyro.Pitch = -targetRotation.Dot( Base6Directions.GetVector( gyro.Orientation.Left ) ) * 60;
+                        gyro.Yaw = targetRotation.Dot( Base6Directions.GetVector( gyro.Orientation.Up ) ) * 60;
+                        gyro.Roll = -targetRotation.Dot( Base6Directions.GetVector( gyro.Orientation.Forward ) ) * 60;
+
+                    } catch(Exception e) { program.Echo( e.StackTrace ); }
+                }*/
+
+            }
+
+            public static Vector3 ToEulerAngles( Quaternion q ) {
+                // Store the Euler angles in radians
+                Vector3 pitchYawRoll = new Vector3();
+
+                double sqw = q.W * q.W;
+                double sqx = q.X * q.X;
+                double sqy = q.Y * q.Y;
+                double sqz = q.Z * q.Z;
+
+                // If quaternion is normalised the unit is one, otherwise it is the correction factor
+                double unit = sqx + sqy + sqz + sqw;
+                double test = q.X * q.Y + q.Z * q.W;
+
+                if(test > 0.4999f * unit)                              // 0.4999f OR 0.5f - EPSILON
+                {
+                    // Singularity at north pole
+                    pitchYawRoll.Y = 2f * (float)Math.Atan2( q.X, q.W );  // Yaw
+                    pitchYawRoll.X = (float)Math.PI * 0.5f;              // Pitch
+                    pitchYawRoll.Z = 0f;                                // Roll
+                    return pitchYawRoll;
+                } else if(test < -0.4999f * unit)                        // -0.4999f OR -0.5f + EPSILON
+                  {
+                    // Singularity at south pole
+                    pitchYawRoll.Y = -2f * (float)Math.Atan2( q.X, q.W ); // Yaw
+                    pitchYawRoll.X = -(float)Math.PI * 0.5f;             // Pitch
+                    pitchYawRoll.Z = 0f;                                // Roll
+                    return pitchYawRoll;
+                } else {
+                    pitchYawRoll.Y = (float)Math.Atan2( 2f * q.Y * q.W - 2f * q.X * q.Z, sqx - sqy - sqz + sqw );       // Yaw
+                    pitchYawRoll.X = (float)Math.Asin( 2f * test / unit );                                             // Pitch
+                    pitchYawRoll.Z = (float)Math.Atan2( 2f * q.X * q.W - 2f * q.Y * q.Z, -sqx + sqy - sqz + sqw );      // Roll
+                }
+
+                return pitchYawRoll;
             }
 
             /// <summary>
@@ -396,7 +531,8 @@ namespace IngameScript {
                 public NavigationData GetNavData( Program program ) {
                     MyDetectedEntityInfo targetInfo;
                     if(program.trackedEntities.TryGetValue( targetEntity, out targetInfo )) {
-                        Vector3 direction = (targetInfo.Position - program.Me.CubeGrid.GridIntegerToWorld(program.Me.Position));
+                        Vector3 direction = (targetInfo.Position - program.myCenterOfMassWorld);
+                        program.Echo( "POS: " + targetInfo.Position.ToString() );
                         float distance = direction.Normalize();
                         return new NavigationData() { desiredSpeed = direction * 100, desiredForward = direction };
                     }
@@ -422,7 +558,7 @@ namespace IngameScript {
                 public NavigationData GetNavData( Program program ) {
                     MyDetectedEntityInfo targetInfo;
                     if(program.trackedEntities.TryGetValue( targetEntity, out targetInfo )) {
-                        return new NavigationData( Vector3.Zero, targetInfo.Orientation.Forward, targetInfo.Orientation.Up );
+                        return new NavigationData( Vector3.Zero, targetInfo.Orientation.Forward, /*targetInfo.Orientation.Up*/ null );
                     }
                     return new NavigationData( Vector3.Zero, null, null );
                 }

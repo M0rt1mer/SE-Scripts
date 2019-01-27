@@ -20,13 +20,13 @@ namespace IngameScript {
         List<string> antennaDebug = new List<string>();
         #endregion
 
-
+        List<IMyShipController> controllers = new List<IMyShipController>();
 
         Dictionary<long, MyDetectedEntityInfo> trackedEntities = new Dictionary<long, MyDetectedEntityInfo>();
         List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
 
         long currentTimestamp = -1;
-
+        Vector3 myCenterOfMassWorld;
 
         public Program() {
 
@@ -67,6 +67,8 @@ namespace IngameScript {
                 filteredOutputs.Add( new ProgrammableBlockOutput( pb ) );
                 logMessages.Enqueue( string.Format( "Registering {0} as output PB", pb.CustomName ) );
             }
+
+            GridTerminalSystem.GetBlocksOfType<IMyShipController>( controllers );
 
             Runtime.UpdateFrequency = UpdateFrequency.Once | UpdateFrequency.Update1;
 
@@ -112,8 +114,17 @@ namespace IngameScript {
                 if(currentTimestamp > 0)
                     currentTimestamp += (int)Runtime.TimeSinceLastRun.TotalMilliseconds;
 
+                Vector3 speed;
                 // track self
-                Vector3 speed = lastPosition == Vector3.Zero ? Vector3.Zero : Me.Position - lastPosition;
+                if(controllers.Count > 0) {
+                    //PRECISE TRACKING
+                    var speeds = controllers[0].GetShipVelocities();
+                    speed = speeds.LinearVelocity;
+                    myCenterOfMassWorld = controllers[0].CenterOfMass;
+                } else {
+                    // estimate tracking
+                    speed = lastPosition == Vector3.Zero ? Vector3.Zero : Me.Position - lastPosition;
+                }
                 Sandbox.ModAPI.Ingame.MyDetectedEntityType thisEntType = Me.CubeGrid.GridSize == 0 ? Sandbox.ModAPI.Ingame.MyDetectedEntityType.LargeGrid : Sandbox.ModAPI.Ingame.MyDetectedEntityType.SmallGrid;
                 RegisterNewSignal( new MyDetectedEntityInfo( Me.EntityId, Me.CubeGrid.CustomName, thisEntType, null, Me.WorldMatrix, speed, MyRelationsBetweenPlayerAndBlock.Owner, Me.WorldAABB, currentTimestamp < 0 ? 1 : currentTimestamp ), false );
 
@@ -126,6 +137,7 @@ namespace IngameScript {
                     output.Output( trackedEntities.Values, currentTimestamp );
 
             } catch(Exception e) { logMessages.Enqueue( e.ToString() ); Echo( e.ToString() ); }
+
             //---------------------------------LOG
             while(logMessages.Count > 10)
                 logMessages.Dequeue();
