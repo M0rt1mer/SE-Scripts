@@ -58,11 +58,9 @@ namespace IngameScript {
                     if( pbs.Count > 0 )
                         pbs.First().TryRun( "SelectTarget " + selectedEntityId );
                 }
-            } else if(argument.StartsWith( "Broadcast" )) {
-                List<IMyRadioAntenna> antennae = new List<IMyRadioAntenna>();
-                GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>( antennae, x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TC]") );
-                if(antennae.Count > 0)
-                    antennae[0].TransmitMessage( "Navigate HIT " + selectedEntityId, MyTransmitTarget.Ally | MyTransmitTarget.Owned );
+            } else if(argument.StartsWith( "Broadcast" ))
+            {
+              IGC.SendBroadcastMessage("tag", "Navigate HIT " + selectedEntityId, TransmissionDistance.AntennaRelay);
             } else {
 
                 //read all inputs

@@ -66,22 +66,15 @@ namespace IngameScript {
                 panel.WritePublicText( text );
             }
         }
-        class AntennaOutput : FilteredOutput {
-            IMyRadioAntenna antenna;
-            public AntennaOutput( IMyRadioAntenna antenna ) : base( antenna.CustomData ) {
-                this.antenna = antenna;
+        class AntennaOutput : FilteredOutput
+        {
+            private Program program;
+            public AntennaOutput(Program program) : base("")
+            {
+              this.program = program;
             }
             protected override void Send( string text ) {
-                antenna.TransmitMessage( text );
-            }
-        }
-        class LaserAntennaOutput : FilteredOutput {
-            IMyLaserAntenna antenna;
-            public LaserAntennaOutput( IMyLaserAntenna antenna ) : base( antenna.CustomData ) {
-                this.antenna = antenna;
-            }
-            protected override void Send( string text ) {
-                antenna.TransmitMessage( text );
+                program.IGC.SendBroadcastMessage("data", text, TransmissionDistance.AntennaRelay);
             }
         }
         class ProgrammableBlockOutput : FilteredOutput {

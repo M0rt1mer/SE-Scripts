@@ -63,15 +63,14 @@ namespace IngameScript {
         }
 
         public abstract class StandardModule : Module {
-            public StandardModule( Program program ) : base( program ) {
-            }
+            public StandardModule( Program program ) : base( program ) {}
 
-            public override sealed void Main( string argument, UpdateType type ) {
+            public sealed override void Main( string argument, UpdateType type ) {
 
                 if((type & (UpdateType.Update1 | UpdateType.Update10 | UpdateType.Update100)) > 0)
                     Update();
 
-                if((type & (UpdateType.Antenna | UpdateType.Script | UpdateType.Terminal)) > 0)
+                if((type & (UpdateType.IGC | UpdateType.Script | UpdateType.Terminal)) > 0)
                     Command( argument );
             }
 
