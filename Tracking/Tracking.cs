@@ -26,7 +26,9 @@ namespace IngameScript {
         List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
 
         long currentTimestamp = -1;
-        Vector3 myCenterOfMassWorld;
+        public Vector3 myCenterOfMassWorld;
+        //angle speeds in Radians
+        public Vector3 myAngleSpeeds;
 
         public Program() {
 
@@ -45,19 +47,7 @@ namespace IngameScript {
                 panel.WritePublicText( "" );
             }
 
-            List<IMyLaserAntenna> laserAntennas = new List<IMyLaserAntenna>();
-            GridTerminalSystem.GetBlocksOfType<IMyLaserAntenna>( laserAntennas, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
-            foreach(IMyLaserAntenna antenna in laserAntennas) {
-                filteredOutputs.Add( new LaserAntennaOutput( antenna ) );
-                logMessages.Enqueue( string.Format( "Registering {0} as output antenna", antenna.CustomName ) );
-            }
-
-            List<IMyRadioAntenna> radioAntennas = new List<IMyRadioAntenna>();
-            GridTerminalSystem.GetBlocksOfType<IMyRadioAntenna>( radioAntennas, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
-            foreach(IMyRadioAntenna antenna in radioAntennas) {
-                filteredOutputs.Add( new AntennaOutput( antenna ) );
-                logMessages.Enqueue( string.Format( "Registering {0} as output antenna", antenna.CustomName ) );
-            }
+            filteredOutputs.Add(new AntennaOutput(this));
 
             GridTerminalSystem.GetBlocksOfType( debugAntennae, (x => x.CubeGrid == Me.CubeGrid && x.CustomData.StartsWith( "[TDBG]" )) );
 
@@ -94,7 +84,7 @@ namespace IngameScript {
                         MainUpdate(argument,updateType);
                         break;
                     }
-                case UpdateType.Antenna: {
+                case UpdateType.IGC: {
                         MainSignal( argument );
                         ModuleUpdate( argument, updateType );
                         break;
@@ -121,6 +111,7 @@ namespace IngameScript {
                     var speeds = controllers[0].GetShipVelocities();
                     speed = speeds.LinearVelocity;
                     myCenterOfMassWorld = controllers[0].CenterOfMass;
+                    myAngleSpeeds = speeds.AngularVelocity / 180 * (float)Math.PI;
                 } else {
                     // estimate tracking
                     speed = lastPosition == Vector3.Zero ? Vector3.Zero : Me.Position - lastPosition;

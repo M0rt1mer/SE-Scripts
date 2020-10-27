@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using SpaceEngineers.Game.ModAPI.Ingame;
 using VRageMath;
 
 namespace IngameScript {
@@ -15,6 +16,7 @@ namespace IngameScript {
 
             List<IMyCameraBlock> fixedCameras = new List<IMyCameraBlock>();
             List<IMySensorBlock> sensors = new List<IMySensorBlock>();
+            List<IMyLargeInteriorTurret> turrets = new List<IMyLargeInteriorTurret>();
 
             Vector3 targetedScan;
             double targetedScanRuntime = 1;
@@ -26,6 +28,7 @@ namespace IngameScript {
                 foreach(var cam in fixedCameras)
                     cam.EnableRaycast = true;
                 program.GridTerminalSystem.GetBlocksOfType<IMySensorBlock>( sensors, (x => x.CubeGrid == program.Me.CubeGrid) );
+                program.GridTerminalSystem.GetBlocksOfType<IMyLargeInteriorTurret>( turrets, (x => x.CubeGrid == program.Me.CubeGrid) );
             }
 
             public override void Main( string arguments, UpdateType type ) {
@@ -55,6 +58,13 @@ namespace IngameScript {
                         sensor.DetectedEntities( mdeis );
                         foreach(MyDetectedEntityInfo mdei in mdeis)
                             program.RegisterNewSignal( mdei, true );
+                    }
+
+                    foreach (var turret in turrets)
+                    {
+                      var mdei = turret.GetTargetedEntity();
+                      if(!mdei.IsEmpty())
+                        program.RegisterNewSignal(mdei, true);
                     }
 
                     // ----------------------------- PRIORITY CAMERA SCANNING
