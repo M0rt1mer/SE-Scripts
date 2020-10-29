@@ -6,14 +6,15 @@ using System.Linq;
 namespace IngameScript {
     partial class Program {
 
-        static Dictionary<string, Func<Program,Module>> factoryLst = new Dictionary<string, Func<Program,Module>>() {
+        static readonly Dictionary<string, Func<Program,Module>> factoryLst = new Dictionary<string, Func<Program,Module>>() {
             { "navigation", (program) => new ModNavigation(program) },
             { "tracking", (program) => new ModTracking(program) },
-            { "missile", (program) => new ModMissileFlightControl(program) }
+            { "missile", (program) => new ModMissileFlightControl(program) },
+            { "turret", (program) => new ModTurret(program) }
         };
 
-        Dictionary<string, Module> installedModules = new Dictionary<string, Module>();
-        SortedList<int,Module> moduleUpdateOrder = new SortedList<int,Module>();
+        readonly Dictionary<string, Module> installedModules = new Dictionary<string, Module>();
+        readonly SortedList<int,Module> moduleUpdateOrder = new SortedList<int,Module>();
 
         void ModuleIntialize( string config ) {
             Dictionary<Module, IEnumerable<string>> initArguments = new Dictionary<Module, IEnumerable<string>>();

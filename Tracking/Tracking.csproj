@@ -38,6 +38,7 @@
     <Compile Include="Extension.cs" />
     <Compile Include="ModMissileFlightControl.cs" />
     <Compile Include="ModNavigation.cs" />
+    <Compile Include="ModTurret.cs" />
     <Compile Include="ModuleSystem.cs" />
     <Compile Include="ModTracking.cs" />
     <Compile Include="Output.cs" />

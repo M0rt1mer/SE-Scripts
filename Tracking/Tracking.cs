@@ -6,6 +6,9 @@ using VRage.Game;
 using VRageMath;
 
 namespace IngameScript {
+  /**
+   * Main class of the script, handles basic tracking, device management, communication
+   */
     partial class Program : MyGridProgram {
 
         private const float PASSIVE_ROAM_DISTANCE = 50;
@@ -20,10 +23,10 @@ namespace IngameScript {
         List<string> antennaDebug = new List<string>();
         #endregion
 
-        List<IMyShipController> controllers = new List<IMyShipController>();
+        readonly List<IMyShipController> controllers = new List<IMyShipController>();
 
-        Dictionary<long, MyDetectedEntityInfo> trackedEntities = new Dictionary<long, MyDetectedEntityInfo>();
-        List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
+        readonly Dictionary<long, MyDetectedEntityInfo> trackedEntities = new Dictionary<long, MyDetectedEntityInfo>();
+        readonly List<FilteredOutput> filteredOutputs = new List<FilteredOutput>();
 
         long currentTimestamp = -1;
         public Vector3 myCenterOfMassWorld;
@@ -95,6 +98,8 @@ namespace IngameScript {
                     }
             }
         }
+
+        MyDetectedEntityInfo GetMyMDEI() => trackedEntities[Me.EntityId];
 
         Vector3 lastPosition = Vector3.Zero;
         private void MainUpdate( string arguments, UpdateType upd ) {

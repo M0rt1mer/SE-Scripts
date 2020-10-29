@@ -8,6 +8,9 @@ using VRageMath;
 namespace IngameScript {
     partial class Program {
 
+      /**
+       * Handles device control for trackig (cameras, turrets, etc.)
+       */
         public class ModTracking : Module {
 
             public ModTracking( Program program ) : base( program ) {}
@@ -29,6 +32,7 @@ namespace IngameScript {
                     cam.EnableRaycast = true;
                 program.GridTerminalSystem.GetBlocksOfType<IMySensorBlock>( sensors, (x => x.CubeGrid == program.Me.CubeGrid) );
                 program.GridTerminalSystem.GetBlocksOfType<IMyLargeInteriorTurret>( turrets, (x => x.CubeGrid == program.Me.CubeGrid) );
+                program.logMessages.Enqueue( $"Setting up tracking with {fixedCameras.Count} cams, {sensors.Count} sensors, {turrets.Count} turrets." );
             }
 
             public override void Main( string arguments, UpdateType type ) {

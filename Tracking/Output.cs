@@ -50,10 +50,10 @@ namespace IngameScript {
 
             protected abstract void Send( string text );
 
-            public string MDEIToString( MyDetectedEntityInfo mdei ) {
-                return string.Format( "{0}:{1}:{2:0.00},{3:0.00},{4:0.00};{5:0.00},{6:0.00},{7:0.00}@{8}\n", mdei.EntityId, nameConverter.Replace( mdei.Name, "" ), mdei.BoundingBox.Min.X, mdei.BoundingBox.Min.Y, mdei.BoundingBox.Min.Z, mdei.BoundingBox.Max.X, mdei.BoundingBox.Max.Y, mdei.BoundingBox.Max.Z, mdei.TimeStamp );
-            }
+            public string MDEIToString( MyDetectedEntityInfo mdei ) =>
+              $"{mdei.EntityId}:{ConvertName(mdei.Name)}:{mdei.BoundingBox.Min.X:0.00},{mdei.BoundingBox.Min.Y:0.00},{mdei.BoundingBox.Min.Z:0.00};{mdei.BoundingBox.Max.X:0.00},{mdei.BoundingBox.Max.Y:0.00},{mdei.BoundingBox.Max.Z:0.00}@{mdei.TimeStamp}\n";
 
+            public string ConvertName(string name) => name != null ? nameConverter.Replace(name, "") : "NONAME";
             public System.Text.RegularExpressions.Regex nameConverter = new System.Text.RegularExpressions.Regex( @"[^\w\d\s]*" );
         }
 
