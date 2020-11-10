@@ -34,38 +34,46 @@ namespace IngameScript {
         public Vector3 myAngleSpeeds;
 
         public Program() {
+          FindComponents();
+          Runtime.UpdateFrequency = UpdateFrequency.Once | UpdateFrequency.Update1;
 
-            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>( logPanels, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TL]" )) );
-            foreach(var panel in logPanels)
-                panel.WritePublicText( "" );
-            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>( debugPanels, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TDBG]" )) );
-            foreach(var panel in debugPanels)
-                panel.WritePublicText( "" );
-            //OUTPUTS
-            List<IMyTextPanel> output = new List<IMyTextPanel>();
-            GridTerminalSystem.GetBlocksOfType<IMyTextPanel>( output, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
-            foreach(var panel in output) {
-                filteredOutputs.Add( new PanelOutput( panel ) );
-                logMessages.Enqueue( string.Format( "Registering {0} as output panel", panel.CustomName ) );
-                panel.WritePublicText( "" );
-            }
+          logMessages.Enqueue( "Initiating system" );
+          instance = this;
+        }
 
-            filteredOutputs.Add(new AntennaOutput(this));
+        public static Program instance;
 
-            GridTerminalSystem.GetBlocksOfType( debugAntennae, (x => x.CubeGrid == Me.CubeGrid && x.CustomData.StartsWith( "[TDBG]" )) );
+        void FindComponents()
+        {
+          GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(logPanels, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TL]")));
+          foreach (var panel in logPanels)
+            panel.WritePublicText("");
+          GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(debugPanels, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TDBG]")));
+          foreach (var panel in debugPanels)
+            panel.WritePublicText("");
+          //OUTPUTS
+          List<IMyTextPanel> output = new List<IMyTextPanel>();
+          GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(output, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TR]")));
+          foreach (var panel in output)
+          {
+            filteredOutputs.Add(new PanelOutput(panel));
+            logMessages.Enqueue(string.Format("Registering {0} as output panel", panel.CustomName));
+            panel.WritePublicText("");
+          }
 
-            List<IMyProgrammableBlock> pbs = new List<IMyProgrammableBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>( pbs, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith( "[TR]" )) );
-            foreach(IMyProgrammableBlock pb in pbs) {
-                filteredOutputs.Add( new ProgrammableBlockOutput( pb ) );
-                logMessages.Enqueue( string.Format( "Registering {0} as output PB", pb.CustomName ) );
-            }
+          filteredOutputs.Add(new AntennaOutput(this));
 
-            GridTerminalSystem.GetBlocksOfType<IMyShipController>( controllers );
+          GridTerminalSystem.GetBlocksOfType(debugAntennae, (x => x.CubeGrid == Me.CubeGrid && x.CustomData.StartsWith("[TDBG]")));
 
-            Runtime.UpdateFrequency = UpdateFrequency.Once | UpdateFrequency.Update1;
+          /*List<IMyProgrammableBlock> pbs = new List<IMyProgrammableBlock>();
+          GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(pbs, (x => x.CubeGrid == Me.CubeGrid && x.CustomName.StartsWith("[TR]")));
+          foreach (IMyProgrammableBlock pb in pbs)
+          {
+            filteredOutputs.Add(new ProgrammableBlockOutput(pb));
+            logMessages.Enqueue(string.Format("Registering {0} as output PB", pb.CustomName));
+          }*/
 
-            logMessages.Enqueue( "Initiating system" );
+          GridTerminalSystem.GetBlocksOfType<IMyShipController>(controllers);
         }
 
         public void Main( string argument, UpdateType updateType ) {
@@ -81,9 +89,11 @@ namespace IngameScript {
                         ModuleIntialize( Me.CustomData );
                         break;
                     }
+                case UpdateType.Update100:
+                        FindComponents();
+                        goto case UpdateType.Update1;
                 case UpdateType.Update1:
-                case UpdateType.Update10:
-                case UpdateType.Update100: {
+                case UpdateType.Update10:{
                         MainUpdate(argument,updateType);
                         break;
                     }
@@ -135,7 +145,7 @@ namespace IngameScript {
             } catch(Exception e) { logMessages.Enqueue( e.ToString() ); Echo( e.ToString() ); }
 
             //---------------------------------LOG
-            while(logMessages.Count > 10)
+            while(logMessages.Count > 16)
                 logMessages.Dequeue();
             StringBuilder bld = new StringBuilder();
             foreach(string str in logMessages)
@@ -187,6 +197,8 @@ namespace IngameScript {
         public void DebugWithAntenna(string debugString) {
             antennaDebug.Add( debugString );
         }
+
+        public void Log(string msg) => logMessages.Enqueue(msg);
 
         private struct PrioritizedScan {
             Vector3 position;

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sandbox.Engine.Utils;
 using Sandbox.ModAPI.Ingame;
 using Sandbox.ModAPI.Interfaces;
-using Sandbox.ModAPI.Interfaces.Terminal;
-using VRage.Game;
 using VRageMath;
 
 namespace IngameScript {
@@ -14,68 +13,29 @@ namespace IngameScript {
 
       public override int Priority => 1000;
 
-      private ITerminalAction shootOn;
-      private ITerminalAction shootOff;
+      private ITerminalAction _shootOn;
+      private ITerminalAction _shootOff;
+      private List<Turret> _turrets;
+      private long _targetId = 0L;
+      private const float TolerableAngleDiff = 0.3f;
 
       public override void Initialize(IEnumerable<string> arguments)
       {
-        turrets = FindAllTurrets();
-        program.logMessages.Enqueue($"Turret mod initialized with {turrets.Count} turrets");
+        _turrets = FindAllTurrets();
+        program.logMessages.Enqueue($"Turret mod initialized with {_turrets.Count} turrets");
 
-        if (turrets.Count > 0)
+        if (_turrets.Count > 0)
         {
-          shootOn = turrets[0].guns[0].GetActionWithName("Shoot_On");
-          shootOff = turrets[0].guns[0].GetActionWithName("Shoot_Off");
+          _shootOn = _turrets[0].guns[0].GetActionWithName("Shoot_On");
+          _shootOff = _turrets[0].guns[0].GetActionWithName("Shoot_Off");
         }
       }
-
-      private List<Turret> turrets;
-      private long targetId = 0L;
 
       public override void Main(string argument, UpdateType upType)
       {
         var targets = FindTargets();
-        foreach (var turret in turrets) 
+        foreach (var turret in _turrets) 
           ControlTurret(turret, targets.Count == 0 ? new long?() : targets[0]);
-
-        return;
-        if (targetId == 0L)
-        {
-          foreach(var mdei in program.trackedEntities.Values)
-          {
-            if (mdei.Type == MyDetectedEntityType.CharacterHuman)
-            {
-              targetId = mdei.EntityId;
-            }
-          }
-          if (targetId == 0L)
-          {
-            return;
-          }
-        }
-
-        Vector3 target = program.trackedEntities[targetId].Position;
-        //Echo(target.ToString());
-
-        IMyMotorStator AZ = GridTerminalSystem.GetBlockWithName("AZ") as IMyMotorStator;
-
-        var desiredAngle = CalculateDesiredAngle(AZ, target );
-        RotateTowardsAngle(AZ, desiredAngle);
-
-        var EL = GridTerminalSystem.GetBlockWithName("EL") as IMyMotorStator;
-
-        //elevation
-
-        //float desiredElevation = CalcElevation(normalizedDir, rotorLf, rotorFw);
-        float desiredElevation = CalculateDesiredAngle(EL, target );
-        //program.logMessages.Enqueue( $"Desired elevation: {desiredElevation}" );
-        
-        if (desiredElevation < EL.LowerLimitRad || desiredElevation > EL.UpperLimitRad)
-        {
-          program.logMessages.Enqueue("Out of reach");
-        }
-
-        RotateTowardsAngle(EL, desiredElevation);
       }
 
       void ControlTurret(Turret turret, long? target)
@@ -83,37 +43,61 @@ namespace IngameScript {
         if (!target.HasValue)
         {
           foreach (var mySmallGatlingGun in turret.guns)
-            shootOff.Apply(mySmallGatlingGun);
+            _shootOff.Apply(mySmallGatlingGun);
           return;
         }
 
         MyDetectedEntityInfo targetMdei = program.trackedEntities[target.Value];
         //desired rotation
-        Vector3 turretPositionApprox = turret.baseRotor.CubeGrid.GridIntegerToWorld(turret.baseRotor.Position);
+        Vector3 turretPositionApprox = turret.gunsRotor.TopGrid.GridIntegerToWorld(turret.averageGunPosition);
+
         //expected interception time
         float expectedInterceptTime = (float) Math.Sqrt( Vector3.Distance(targetMdei.Position, turretPositionApprox)/(400 + targetMdei.Velocity.Length()));
         Vector3 positionAtIntercept = targetMdei.Position + expectedInterceptTime * targetMdei.Velocity;
 
-        program.logMessages.Enqueue($"Target velocity : {targetMdei.Velocity}");
-        program.logMessages.Enqueue($"Expected intercept time : {expectedInterceptTime}");
+        /*program.logMessages.Enqueue($"from guns: {positionAtIntercept - turretPositionApprox}");
+        program.logMessages.Enqueue($"from base: {positionAtIntercept - turret.baseRotor.CubeGrid.GridIntegerToWorld(turret.baseRotor.Position)}");
 
-        bool atTarget = true;
-        foreach(IMyMotorStator stator in turret.joints)
+        program.logMessages.Enqueue($"Target velocity : {targetMdei.Velocity}");
+        program.logMessages.Enqueue($"Expected intercept time : {expectedInterceptTime}");*/
+
+        float angleDiff = 0;
+        foreach(var stator in turret.joints)
         {
-          float desiredJointAngle = CalculateDesiredAngle(stator, positionAtIntercept);
-          atTarget &= RotateTowardsAngle(stator, desiredJointAngle);
+          float desiredJointAngle = CalculateDesiredAngle(stator, positionAtIntercept - turretPositionApprox);
+          angleDiff += RotateTowardsAngle(stator, desiredJointAngle);
         }
-        if(atTarget)
+
+        //program.logMessages.Enqueue($"Angle diff : {angleDiff}");
+        //program.Log($"Turret local position: {Me.CubeGrid.WorldToGridInteger(turretPositionApprox)}");
+        //program.Log($"Target local position: {Me.CubeGrid.WorldToGridInteger(positionAtIntercept)}");
+
+        if (angleDiff < TolerableAngleDiff)
+        {
+          bool targetBlocked = false;
+          program.Me.CubeGrid.RayCastGrid( turretPositionApprox, (positionAtIntercept - turretPositionApprox),
+            (pos) =>
+            {
+              targetBlocked = true;
+              //program.logMessages.Enqueue( $"Block: {program.Me.CubeGrid.GetCubeBlock(pos).BlockDefinition.SubtypeName} " );
+            } );
           foreach (var mySmallGatlingGun in turret.guns)
-            shootOn.Apply(mySmallGatlingGun);
+            (targetBlocked ? _shootOff : _shootOn).Apply(mySmallGatlingGun);
+        }
       }
 
       List<long> FindTargets()
       {
-        List<long> possibleTargets = new List<long>();
+        var possibleTargets = new List<long>();
         foreach (var trackedEntity in program.trackedEntities.Values)
         {
-          if (Vector3.DistanceSquared(trackedEntity.Position,program.Me.Position) > 800 * 800) //out of weapons range
+          if (trackedEntity.Type == MyDetectedEntityType.CharacterHuman)
+          {
+            possibleTargets.Clear();
+            possibleTargets.Add(trackedEntity.EntityId);
+            return possibleTargets;
+          }
+          if (Vector3.DistanceSquared(trackedEntity.Position, program.Me.Position) > 800 * 800) //out of weapons range
             continue;
 
           if (trackedEntity.Type == MyDetectedEntityType.Missile && IsMissileDangerous(trackedEntity))
@@ -122,16 +106,16 @@ namespace IngameScript {
             continue;
           }
           
-          if (trackedEntity.Relationship != MyRelationsBetweenPlayerAndBlock.Enemies)
+         /* if (trackedEntity.Relationship != MyRelationsBetweenPlayerAndBlock.Enemies)
             continue;
           
-          possibleTargets.Add(trackedEntity.EntityId);
+          possibleTargets.Add(trackedEntity.EntityId);*/
         }
 
         return possibleTargets;
       }
 
-      bool IsMissileDangerous(MyDetectedEntityInfo mdei)
+      private bool IsMissileDangerous(MyDetectedEntityInfo mdei)
       {
         var relativeVelocity = mdei.Velocity - program.GetMyMDEI().Velocity;
         var intersects = program.Me.WorldAABB.Intersects(new Ray(mdei.Position, relativeVelocity));
@@ -139,7 +123,7 @@ namespace IngameScript {
         return intersects.HasValue && intersects.Value < 800; // it's out of it's range
       }
 
-      private float CalculateDesiredAngle(IMyMotorStator AZ, Vector3 target)
+      private float CalculateDesiredAngle(IMyMotorStator AZ, Vector3 toTarget)
       {
         Vector3 origin = AZ.CubeGrid.GridIntegerToWorld(AZ.Position);
         Vector3 rotorLf = AZ.CubeGrid.GridIntegerToWorld(AZ.Position + Base6Directions.GetIntVector(AZ.Orientation.Left)) - origin;
@@ -147,7 +131,6 @@ namespace IngameScript {
 
         rotorLf.Normalize();
         rotorFw.Normalize();
-        Vector3 toTarget = target - origin;
 
         Vector3 normalizedDir;
         Vector3.Normalize(ref toTarget, out normalizedDir);
@@ -171,7 +154,7 @@ namespace IngameScript {
         return -(float) Math.Atan2(projectUp, -xySize);
       }
 
-      public bool RotateTowardsAngle(IMyMotorStator stator, float targetAngle)
+      public float RotateTowardsAngle(IMyMotorStator stator, float targetAngle)
       {
         float angleDiff = (float) ((targetAngle - stator.Angle + Math.PI * 2) % (Math.PI * 2));
 
@@ -185,22 +168,29 @@ namespace IngameScript {
           stator.TargetVelocityRPM = -speed;
 
         if (Math.Abs(angleDiff) > 0.01)
-          return true;
+          return Math.Abs(angleDiff);
         else
           stator.TargetVelocityRPM = 0;
-        return false;
+        return 0; //at target
       }
 
       struct Turret
       {
         public readonly IMyMotorStator[] joints;
         public readonly IMySmallGatlingGun[] guns;
+        public Vector3I averageGunPosition;
+
         public IMyMotorStator baseRotor => joints[0];
+        public IMyMotorStator gunsRotor => joints[joints.Length-1];
 
         public Turret(IMyMotorStator[] joints, IMySmallGatlingGun[] guns)
         {
           this.joints = joints;
           this.guns = guns;
+          averageGunPosition = Vector3I.Zero;
+          foreach (var mySmallGatlingGun in guns)
+            averageGunPosition += mySmallGatlingGun.Position;
+          averageGunPosition /= guns.Length;
         }
       }
 
